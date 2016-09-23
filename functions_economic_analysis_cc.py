@@ -6,10 +6,12 @@ from scipy import interp
 
 
 def days(length):
+	'''length of disruption in days as a function of water depth in cm''' 
     s = InterpolatedUnivariateSpline([0, 5, 30, 50, 200, 300], [0,1*length,5*length,10*length,30*length,50*length], k=1)
     return s
 
 def steps(cm,redirection):
+	''' share of traffic redirected to the second best route as a function of water depth in cm (3 scenarios)''' 
     if redirection==0:
         if cm<15:
             percent = 0
@@ -47,7 +49,7 @@ def steps(cm,redirection):
 
 def annual_losses(expected_losses,losses_col):
     '''
-    Calculates expected annual losses based on losses per return period event.
+    Calculates expected annual losses based on losses per return period event. it takes as an input a dataframe that as a 'RP' column. the second argument is the name of the column that contains the losses for each RP
     '''
     cost=expected_losses.copy()
     #keeps the last two points for extrapolation
@@ -64,6 +66,9 @@ def annual_losses(expected_losses,losses_col):
     return inte
 	
 def tot_huaycos(link,costs_all,duration_huaycos,improved_2nd,expost_intervention=False):
+	''' 
+	for landslide we assume there is a full disruption for all events. this function calculates the user losses + reconstruction losses
+	''' 
 	selectline_f = (costs_all.scenarioID==link)&(costs_all.improved_2nd==improved_2nd)&(costs_all.partial_or_full=="full")
 	tot = duration_huaycos*costs_all.ix[selectline_f,"cost_with_traffic"].values[0]
 	if expost_intervention:
@@ -74,6 +79,7 @@ def tot_huaycos(link,costs_all,duration_huaycos,improved_2nd,expost_intervention
 	return tot
 	
 def usercost(link,days,costs_all,share_traffic,improved_2nd):
+	''' user cost for a disruption event -- can take into account the fact that the second best is improved (in that case RUC increase is lower)'''
 	
 	selectline_p = (costs_all.scenarioID==link)&(costs_all.improved_2nd==improved_2nd)&(costs_all.partial_or_full=="partial")
 	selectline_f = (costs_all.scenarioID==link)&(costs_all.improved_2nd==improved_2nd)&(costs_all.partial_or_full=="full")
@@ -101,12 +107,14 @@ def usercost(link,days,costs_all,share_traffic,improved_2nd):
 	return tot
 	
 def intervention_cost(costs_all,link,improved_2nd,typeofinterv):
+	'''cost of intervention*km ''' 
 	selectline_f = (costs_all.scenarioID==link)&(costs_all.improved_2nd==improved_2nd)&(costs_all.partial_or_full=="full")
 	tot = costs_all.ix[selectline_f,typeofinterv].values[0]*costs_all.ix[selectline_f,"KM"].values[0]
 	return tot
 		
 	
 def get_water_level(costs_all,link,proba,climat):
+	'''extracts water levels. the 'proba' argument is how much frequency is increased because of climate change or el nino''' 
 	water = DataFrame(columns=['return_period','water_level','proba'])
 	for RP in [5,10,25,50,100,250,500,1000]:
 		col = "{}_RP{} (dm)".format(climat,RP)
@@ -149,6 +157,7 @@ def summarize_costs_floods(link,costs_all,climat,redirection,length,proba,exante
 	return summary
 	
 def costs_huaycos(link,costs_all,duration_huaycos,exanteinterv):
+	''' for landslides''' 
 	summary = DataFrame(columns=["user cost","ex-post interv"])
 	if exanteinterv=='tunnel':
 		summary.loc[0,:]=[0,0]
